@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AB Studio · Scheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;900&family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Homemade+Apple&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F5F5F2;--ink:#1A1A1A;--accent:#E9F272;--line:#1A1A1A;
+    --muted:#6B6B66;--field:#FFFFFF;--warn:#B8541E;--rule:#D8D8D2;--ok:#3A7D3A;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--paper);color:var(--ink);font-family:"DM Sans",sans-serif;
+    line-height:1.5;padding:clamp(14px,4vw,40px);max-width:1120px;margin:0 auto}
+  ::selection{background:var(--accent);color:var(--ink)}
+
+  .mast{border-bottom:2px solid var(--line);padding-bottom:18px}
+  .eyebrow{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;
+    align-items:center;flex-wrap:wrap;gap:8px}
+  .eyebrow .dot{display:inline-block;width:7px;height:7px;background:var(--accent);
+    border:1px solid var(--ink);border-radius:50%;margin-right:6px}
+  h1{font-family:"Big Shoulders Display",sans-serif;font-weight:900;
+    font-size:clamp(34px,7vw,58px);line-height:.92;letter-spacing:-.01em;
+    text-transform:uppercase;margin-top:12px}
+
+  .tabs{display:flex;gap:0;margin-top:22px;border-bottom:1px solid var(--line)}
+  .tab{font-family:"DM Mono",monospace;font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase;background:none;border:none;padding:12px 18px;cursor:pointer;
+    color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom:2px solid var(--ink)}
+  .tab .c{font-size:10px;color:var(--muted);margin-left:5px}
+
+  .view{margin-top:24px}
+  .view[hidden]{display:none}
+
+  /* composer layout */
+  .composer{display:grid;grid-template-columns:1fr 360px;gap:26px}
+  @media (max-width:840px){.composer{grid-template-columns:1fr}}
+
+  .field{margin-bottom:20px}
+  label.mono{display:block;font-family:"DM Mono",monospace;font-size:10px;
+    letter-spacing:.13em;text-transform:uppercase;margin-bottom:8px;color:var(--muted)}
+  label.mono .req{color:var(--ink)}
+  input[type=text],input[type=url],input[type=date],input[type=time],textarea{
+    width:100%;font-family:"DM Sans",sans-serif;font-size:15px;color:var(--ink);
+    background:var(--field);border:1px solid var(--line);padding:11px 12px;border-radius:0}
+  input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  textarea{resize:vertical;min-height:90px;line-height:1.5}
+  .hint{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.45}
+
+  .seg{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line)}
+  .seg button{font-family:"Big Shoulders Display",sans-serif;font-weight:600;font-size:16px;
+    text-transform:uppercase;background:var(--field);border:none;border-right:1px solid var(--line);
+    padding:13px 4px;cursor:pointer;color:var(--ink)}
+  .seg button:last-child{border-right:none}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .seg button .t{display:block;font-family:"DM Mono",monospace;font-size:8px;font-weight:400;
+    letter-spacing:.06em;margin-top:3px;opacity:.6}
+
+  .media-note{font-family:"DM Mono",monospace;font-size:11px;margin-top:9px;
+    padding:8px 11px;border-left:3px solid var(--accent);background:var(--field)}
+
+  .guide{margin-top:11px;border:1px dashed var(--line);background:var(--field)}
+  .guide summary{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;cursor:pointer;padding:10px 12px;color:var(--ink);list-style:none}
+  .guide summary::-webkit-details-marker{display:none}
+  .guide summary::before{content:"+ ";color:var(--muted)}
+  .guide[open] summary::before{content:"– "}
+  .guide-body{padding:2px 14px 14px;border-top:1px solid var(--rule)}
+  .guide-body p{font-size:12.5px;color:var(--ink);margin:9px 0;line-height:1.5}
+  .guide-body .g-warn{color:var(--warn);font-weight:700}
+  .g-drivelink{display:inline-block;font-family:"DM Mono",monospace;font-size:12px;letter-spacing:.04em;
+    background:var(--accent);color:var(--ink);text-decoration:none;padding:9px 13px;border:1px solid var(--ink);margin-bottom:4px}
+  .g-drivelink:hover{background:var(--ink);color:var(--paper)}
+  .g-code{display:block;font-family:"DM Mono",monospace;font-size:11px;background:var(--paper);
+    border:1px solid var(--rule);padding:8px 10px;margin:5px 0;word-break:break-all;color:var(--ink)}
+  .g-code b{background:var(--accent);padding:0 2px}
+  .g-or{font-style:italic;color:var(--muted)!important}
+  .g-convert{display:flex;gap:7px;margin:8px 0}
+  .g-convert input{flex:1;font-family:"DM Mono",monospace;font-size:12px;
+    border:1px solid var(--line);padding:9px 10px;background:var(--paper)}
+  .btn-convert{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;background:var(--ink);color:var(--paper);border:1px solid var(--ink);
+    padding:9px 14px;cursor:pointer}
+  .btn-convert:hover{background:#000}
+  .g-note{font-size:11.5px;color:var(--muted)!important;border-top:1px solid var(--rule);padding-top:9px}
+  .tag-presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+  .tagset{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.04em;
+    background:var(--field);border:1px solid var(--line);padding:7px 11px;cursor:pointer;color:var(--ink)}
+  .tagset:hover{background:var(--accent)}
+  .capgen{margin-top:10px;border:1px dashed var(--line);background:var(--field)}
+  .capgen summary{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    cursor:pointer;padding:10px 12px;color:var(--ink);list-style:none}
+  .capgen summary::-webkit-details-marker{display:none}
+  .capgen summary::before{content:"+ ";color:var(--muted)}
+  .capgen[open] summary::before{content:"– "}
+  .capgen-body{padding:4px 12px 13px;border-top:1px solid var(--rule)}
+  .cg-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:9px 0}
+  @media (max-width:420px){.cg-row{grid-template-columns:1fr}}
+  .cg-row select,.cg-row input{width:100%;font-family:"DM Sans",sans-serif;font-size:13px;
+    border:1px solid var(--line);padding:9px 10px;background:var(--paper);color:var(--ink)}
+  .cg-btn{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    background:var(--ink);color:var(--paper);border:1px solid var(--ink);padding:9px 14px;cursor:pointer}
+  .cg-btn:hover{background:#000}
+  .cg-out{margin-top:11px;display:flex;flex-direction:column;gap:7px}
+  .cg-opt{font-family:"DM Sans",sans-serif;font-size:13px;line-height:1.5;background:var(--paper);
+    border:1px solid var(--line);padding:10px 11px;cursor:pointer;white-space:pre-wrap}
+  .cg-opt:hover{border-color:var(--ink);background:#FCFCE8}
+  .cg-opt .pick{font-family:"DM Mono",monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);display:block;margin-bottom:4px}
+  .cg-note{font-size:11.5px;color:var(--muted);margin-top:9px;line-height:1.45}
+  .cg-lang{display:flex;gap:5px;margin-bottom:4px}
+  .cg-lang button{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.08em;
+    border:1px solid var(--line);background:var(--paper);padding:5px 13px;cursor:pointer;color:var(--ink)}
+  .cg-lang button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+  .url-row{display:flex;gap:8px;margin-bottom:8px}
+  .url-row input{flex:1}
+  .url-x{background:var(--field);border:1px solid var(--line);width:42px;flex-shrink:0;
+    cursor:pointer;font-size:17px;color:var(--muted)}
+  .url-x:hover{color:var(--warn)}
+  .add-url{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;background:none;border:1px dashed var(--line);padding:8px 12px;
+    cursor:pointer;color:var(--ink)}
+  .add-url:hover{background:var(--field)}
+  [hidden]{display:none !important}
+
+  .cap-foot{display:flex;justify-content:space-between;margin-top:7px;flex-wrap:wrap;gap:6px}
+  .cap-count{font-family:"DM Mono",monospace;font-size:11px;color:var(--muted)}
+  .cap-flags{font-family:"DM Mono",monospace;font-size:11px;color:var(--warn)}
+
+  .sched-mode{display:flex;gap:6px;margin-bottom:12px}
+  .sched-mode button{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;border:1px solid var(--line);background:var(--field);
+    padding:9px 14px;cursor:pointer;color:var(--ink)}
+  .sched-mode button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:420px){.two{grid-template-columns:1fr}}
+  .dow{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+  .dow button{font-family:"DM Mono",monospace;font-size:11px;width:38px;height:34px;
+    border:1px solid var(--line);background:var(--field);cursor:pointer;color:var(--ink)}
+  .dow button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .presets{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .preset{font-family:"DM Mono",monospace;font-size:11px;background:var(--field);
+    border:1px solid var(--line);padding:7px 11px;cursor:pointer;color:var(--ink)}
+  .preset:hover{background:var(--accent)}
+
+  .add-btn{font-family:"Big Shoulders Display",sans-serif;font-weight:900;font-size:20px;
+    text-transform:uppercase;letter-spacing:.02em;background:var(--ink);color:var(--paper);
+    border:1px solid var(--ink);padding:15px 26px;cursor:pointer;width:100%}
+  .add-btn:hover{background:#000}
+
+  /* preview */
+  .preview-col{position:sticky;top:18px;align-self:start}
+  .pv-label{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .pv-toggle{display:flex;gap:5px;margin-bottom:10px}
+  .pv-toggle button{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+    border:1px solid var(--line);background:var(--field);padding:6px 13px;cursor:pointer;color:var(--ink)}
+  .pv-toggle button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .phone{background:var(--ink);border-radius:26px;padding:10px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+  .screen{background:#000;border-radius:18px;overflow:hidden;position:relative;aspect-ratio:9/16}
+  .screen.feed{aspect-ratio:4/5}
+  .screen img{width:100%;height:100%;object-fit:cover;display:block}
+  .ph-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:8px;color:#888;font-family:"DM Mono",monospace;font-size:11px;text-align:center;padding:20px}
+  .ph-empty span{font-size:26px}
+
+  /* story overlays */
+  .st-grad{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.25) 0%,transparent 25%,transparent 60%,rgba(0,0,0,.45) 100%);pointer-events:none}
+  .st-top{position:absolute;top:12px;left:12px;right:12px;display:flex;align-items:center;gap:8px}
+  .st-ring{width:30px;height:30px;border-radius:50%;border:2px solid var(--accent);flex-shrink:0;
+    background:#333 center/cover}
+  .st-handle{font-family:"DM Sans",sans-serif;font-size:12px;color:#fff;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .st-bar{position:absolute;top:6px;left:12px;right:12px;height:2px;background:rgba(255,255,255,.35);border-radius:2px}
+  .st-bar::after{content:"";position:absolute;left:0;top:0;height:100%;width:38%;background:#fff;border-radius:2px}
+  .st-text{position:absolute;left:14px;right:14px;top:50%;transform:translateY(-50%);
+    font-family:"DM Sans",sans-serif;font-weight:700;font-size:19px;color:#fff;text-align:center;
+    line-height:1.3;text-shadow:0 2px 8px rgba(0,0,0,.55);word-break:break-word}
+  .st-link{position:absolute;left:50%;transform:translateX(-50%);bottom:20px;
+    background:rgba(255,255,255,.92);color:#111;font-family:"DM Sans",sans-serif;font-size:12px;
+    font-weight:700;padding:7px 16px;border-radius:18px;display:flex;align-items:center;gap:5px;max-width:80%}
+  .st-link .chev{font-size:9px}
+  .st-link span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* feed/reel overlay caption */
+  .fv-cap{background:var(--field);border:1px solid var(--line);border-top:none;padding:11px 12px;
+    font-size:12.5px;line-height:1.45;max-height:140px;overflow-y:auto;white-space:pre-wrap}
+  .fv-cap .tags{color:#3a5fb0;margin-top:4px}
+  .fv-collab{font-family:"DM Mono",monospace;font-size:10px;color:var(--muted);
+    border:1px solid var(--line);border-top:none;padding:7px 12px}
+  .reel-badge{position:absolute;top:10px;right:10px;font-family:"DM Mono",monospace;font-size:9px;
+    letter-spacing:.08em;background:rgba(0,0,0,.55);color:#fff;padding:4px 8px;border-radius:3px}
+  .carousel-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px}
+  .carousel-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.55)}
+  .carousel-dots i.on{background:#fff}
+
+  /* queue / calendar */
+  .cal-head{display:flex;justify-content:space-between;align-items:baseline;
+    border-bottom:2px solid var(--line);padding-bottom:8px;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+  .cal-head h2{font-family:"Big Shoulders Display",sans-serif;font-weight:900;font-size:26px;text-transform:uppercase}
+  .seg-mini{display:flex;gap:6px}
+  .seg-mini button{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;border:1px solid var(--line);background:var(--field);padding:7px 12px;cursor:pointer;color:var(--ink)}
+  .seg-mini button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+  .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+  .wd-head{background:var(--ink);color:var(--paper);font-family:"DM Mono",monospace;font-size:9px;
+    letter-spacing:.08em;text-transform:uppercase;padding:7px 4px;text-align:center}
+  .wd-cell{background:var(--field);min-height:96px;padding:5px;position:relative}
+  .wd-cell .dnum{font-family:"DM Mono",monospace;font-size:10px;color:var(--muted)}
+  .wd-cell.today{background:#FCFCE8}
+  .wd-cell.today .dnum{color:var(--ink);font-weight:700}
+  .ev{font-size:10px;line-height:1.25;padding:3px 5px;margin-top:4px;border-left:3px solid var(--ink);
+    background:var(--paper);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ev.feed{border-color:#1A1A1A}.ev.reel{border-color:#B8541E}
+  .ev.story{border-color:#3a5fb0}.ev.carousel{border-color:#3A7D3A}
+  .ev .et{font-family:"DM Mono",monospace;font-size:8px;color:var(--muted);display:block}
+
+  .qlist{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .qi{background:var(--field);border:1px solid var(--line);padding:11px 13px;display:flex;gap:12px;align-items:flex-start}
+  .qi .fmt{font-family:"DM Mono",monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+    background:var(--ink);color:var(--paper);padding:3px 7px;white-space:nowrap;flex-shrink:0}
+  .qi-body{flex:1;min-width:0}
+  .qi-cap{font-size:13px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .qi-meta{font-family:"DM Mono",monospace;font-size:11px;color:var(--muted);margin-top:5px}
+  .qi-x{background:none;border:none;font-family:"DM Mono",monospace;font-size:11px;color:var(--muted);
+    cursor:pointer;text-decoration:underline;flex-shrink:0}
+  .qi-x:hover{color:var(--warn)}
+  .empty{font-size:13px;color:var(--muted);font-style:italic;padding:18px 0}
+
+  .cal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+  .btn{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    border:1px solid var(--line);padding:10px 15px;cursor:pointer;color:var(--ink);background:var(--field)}
+  .btn:hover{background:var(--accent)}
+  .btn-dark{background:var(--ink);color:var(--paper)}.btn-dark:hover{background:#000}
+
+  .slip-wrap{margin-top:26px}
+  .slip-wrap[hidden]{display:none}
+  .slip-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);
+    padding-bottom:6px;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+  .slip-head h3{font-family:"DM Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:500}
+  pre{font-family:"DM Mono",monospace;font-size:12px;line-height:1.55;background:var(--ink);color:var(--paper);
+    padding:18px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+  .copy-btn{font-family:"DM Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    background:var(--accent);border:1px solid var(--ink);padding:7px 14px;cursor:pointer;color:var(--ink)}
+  .copy-btn:hover{background:var(--ink);color:var(--paper)}
+  .slip-note{font-size:13px;color:var(--muted);margin-top:12px;line-height:1.5}
+  .slip-note b{color:var(--ink)}
+
+  footer{margin-top:44px;border-top:1px solid var(--line);padding-top:15px;font-family:"DM Mono",monospace;
+    font-size:11px;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="eyebrow"><span><span class="dot"></span>AB STUDIO · SOCIAL OPS</span><span>@abstudio_jakarta</span></div>
+  <h1>Scheduler</h1>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab" id="tab-compose" role="tab" aria-selected="true">Compose</button>
+  <button class="tab" id="tab-calendar" role="tab" aria-selected="false">Calendar<span class="c" id="calCount">0</span></button>
+</nav>
+
+<!-- ============ COMPOSE ============ -->
+<section class="view" id="view-compose" role="tabpanel">
+  <div class="composer">
+    <div class="form-col">
+
+      <div class="field">
+        <label class="mono">Image / media link <span class="req">*</span></label>
+        <div id="urlList">
+          <div class="url-row"><input type="url" id="url0" placeholder="https://… direct public image or video URL"></div>
+        </div>
+        <div id="carouselAdd" hidden><button type="button" class="add-url" id="addUrl">+ Add image</button></div>
+        <p class="hint">Must be a <b>direct</b> public URL (ends in .jpg/.png/.mp4, or a hot-linkable host). Drive <b>/view</b> links won’t preview or publish — use a direct image link.</p>
+
+        <details class="guide">
+          <summary>How to get a link from Google Drive</summary>
+          <div class="guide-body">
+            <p><a href="https://drive.google.com/drive/folders/13T079fJCYYegxPkEYZPq4xE86S0Qb2PU" target="_blank" rel="noopener" class="g-drivelink">→ Open the AB public image drive</a></p>
+            <p><b>This folder is already public.</b> Anything you upload into it is instantly shareable — no per-file sharing step needed. <span class="g-warn">Just don’t move images out of this folder.</span></p>
+            <p><b>1 · Upload</b> your image into the folder (drag-drop, or New → File upload).</p>
+            <p><b>2 · Copy the link.</b> Right-click the uploaded file → <b>Copy link</b>. You’ll get something like:</p>
+            <code class="g-code">https://drive.google.com/file/d/<b>1AbC…xyz</b>/view?usp=sharing</code>
+            <p><b>3 · Convert it</b> to a direct link — paste it in the box below and tap <b>Convert</b>:</p>
+            <div class="g-convert">
+              <input type="text" id="gdriveIn" placeholder="paste Drive /view link here">
+              <button type="button" class="btn-convert" id="gdriveBtn">Convert</button>
+            </div>
+            <p class="g-or">It rewrites to the direct form and drops it straight into the media field above.</p>
+            <p class="g-note">Drive is fine for stills. For <b>Reels (video)</b>, Drive often won’t stream cleanly — a direct .mp4 host works better. Ask admin if a video won’t publish.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="field">
+        <label class="mono" for="caption">Caption</label>
+        <textarea id="caption" placeholder="lowercase. plain. let the work speak."></textarea>
+        <div class="cap-foot"><span class="cap-count" id="capCount">0 / 2200</span><span class="cap-flags" id="capFlags"></span></div>
+        <details class="capgen">
+          <summary>Caption generator</summary>
+          <div class="capgen-body">
+            <div class="cg-lang" id="cgLang" role="group">
+              <button type="button" data-lang="en" aria-pressed="true">EN</button>
+              <button type="button" data-lang="id" aria-pressed="false">ID</button>
+            </div>
+            <div class="cg-row">
+              <div>
+                <label class="mono" for="cgClass">Class</label>
+                <select id="cgClass">
+                  <option value="">— none / general —</option>
+                  <option value="matsculpt">Mat Sculpt · Mon</option>
+                  <option value="strength">Strength · Tue</option>
+                  <option value="hybrid">Hybrid Functional · Wed/Fri</option>
+                  <option value="powerstretch">Power Stretch · Thu</option>
+                  <option value="abway">The AB Way · Sat</option>
+                  <option value="private">Private Training</option>
+                </select>
+              </div>
+              <div>
+                <label class="mono" for="cgAngle">Angle</label>
+                <select id="cgAngle">
+                  <option value="method">The method (how we train)</option>
+                  <option value="transformation">Transformation / progress</option>
+                  <option value="mindset">Mindset / inner shift</option>
+                  <option value="invite">Soft invite (book / try)</option>
+                  <option value="member">Member voice / testimonial</option>
+                  <option value="class">Class spotlight (uses schedule)</option>
+                </select>
+              </div>
+            </div>
+            <div class="cg-row" style="grid-template-columns:1fr">
+              <div>
+                <label class="mono" for="cgFocus">Extra detail (optional)</label>
+                <input type="text" id="cgFocus" placeholder="overrides the auto focus, e.g. core finisher">
+              </div>
+            </div>
+            <button type="button" class="cg-btn" id="cgGen">Generate 3 options →</button>
+            <div id="cgOut" class="cg-out" hidden></div>
+            <p class="cg-note">Drafts in AB voice — lowercase, no hype, no exclamation. Tap one to drop it into the caption, then edit.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="field">
+        <label class="mono" for="tags">Hashtags <span style="color:var(--muted)">· max 5 (IG cap)</span></label>
+        <div class="tag-presets">
+          <button type="button" class="tagset" data-set="group">Group class</button>
+          <button type="button" class="tagset" data-set="private">Private class</button>
+          <button type="button" class="tagset" data-set="base">#ABStudio only</button>
+        </div>
+        <input type="text" id="tags" placeholder="#ABStudio …">
+        <p class="hint">Tap a set to fill, then edit. <b>#ABStudio</b> is always included. IG now caps at 5 — keep it tight and local.</p>
+      </div>
+
+      <div class="field">
+        <label class="mono">Type <span class="req">*</span> <span style="color:var(--muted)">· Story can pair with a feed type</span></label>
+        <div class="seg" role="group">
+          <button type="button" data-fmt="post" aria-pressed="true">Post<span class="t">image</span></button>
+          <button type="button" data-fmt="reel" aria-pressed="false">Reel<span class="t">video</span></button>
+          <button type="button" data-fmt="story" aria-pressed="false">Story<span class="t">24h</span></button>
+          <button type="button" data-fmt="carousel" aria-pressed="false">Carousel<span class="t">multi</span></button>
+        </div>
+        <div class="media-note" id="mediaNote">Single image, posted to the feed.</div>
+      </div>
+
+      <!-- story extras -->
+      <div id="storyExtras" hidden>
+        <div class="field">
+          <label class="mono" for="stText">Story text overlay</label>
+          <input type="text" id="stText" placeholder="text shown on the story">
+        </div>
+        <div class="field">
+          <label class="mono" for="stLink">Story link (tap-through)</label>
+          <input type="url" id="stLink" placeholder="https://wa.me/6285353196011">
+          <p class="hint">Becomes the link sticker. WhatsApp, booking, etc.</p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="mono" for="tagProfile">Tag profile</label>
+        <input type="text" id="tagProfile" placeholder="cory_licious — no @ (comma sep for several)">
+        <p class="hint">Added as collaborators / mentions on the post.</p>
+      </div>
+
+      <div class="field">
+        <label class="mono">Schedule <span class="req">*</span></label>
+        <div class="sched-mode" role="group">
+          <button type="button" id="modeOnce" aria-pressed="true">One time</button>
+          <button type="button" id="modeRepeat" aria-pressed="false">Recurring</button>
+        </div>
+
+        <div id="onceFields">
+          <div class="two">
+            <input type="date" id="date" aria-label="Date">
+            <input type="time" id="time" value="19:00" aria-label="Time">
+          </div>
+          <div class="presets">
+            <button type="button" class="preset" data-p="sun19">Sun · 19:00</button>
+            <button type="button" class="preset" data-p="tue19">Tue · 19:00</button>
+            <button type="button" class="preset" data-p="tom8">Tomorrow · 08:00</button>
+          </div>
+        </div>
+
+        <div id="repeatFields" hidden>
+          <label class="mono" style="margin-top:4px">Every</label>
+          <div class="dow" id="repDow" role="group">
+            <button type="button" data-d="0">Su</button><button type="button" data-d="1">Mo</button>
+            <button type="button" data-d="2" aria-pressed="true">Tu</button><button type="button" data-d="3">We</button>
+            <button type="button" data-d="4">Th</button><button type="button" data-d="5">Fr</button><button type="button" data-d="6">Sa</button>
+          </div>
+          <div class="two" style="margin-top:11px">
+            <div><label class="mono" for="repTime">At · WIB</label><input type="time" id="repTime" value="19:00"></div>
+            <div><label class="mono" for="repWeeks"># weeks</label><input type="text" id="repWeeks" value="4" inputmode="numeric"></div>
+          </div>
+          <label class="mono" style="margin-top:11px" for="repStart">Starting</label>
+          <input type="date" id="repStart">
+          <p class="hint">Generates one dated post per chosen day, for N weeks. WIB.</p>
+        </div>
+        <p class="hint" style="margin-top:10px">All times Asia/Jakarta (WIB).</p>
+      </div>
+
+      <button type="button" class="add-btn" id="addBtn">Add to calendar →</button>
+    </div>
+
+    <!-- PREVIEW -->
+    <div class="preview-col">
+      <div class="pv-label">Live preview</div>
+      <div class="pv-toggle" id="pvToggle" hidden>
+        <button type="button" id="pvFeed" aria-pressed="true">Feed</button>
+        <button type="button" id="pvStory" aria-pressed="false">Story</button>
+      </div>
+      <div class="phone">
+        <div class="screen" id="screen">
+          <div class="ph-empty" id="phEmpty"><span>▢</span>paste a direct image URL to preview</div>
+        </div>
+      </div>
+      <div id="fvCap" class="fv-cap" hidden></div>
+      <div id="fvCollab" class="fv-collab" hidden></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CALENDAR ============ -->
+<section class="view" id="view-calendar" role="tabpanel" hidden>
+  <div class="cal-head">
+    <h2>Calendar</h2>
+    <div class="seg-mini" role="group">
+      <button type="button" id="viewWeek" aria-pressed="true">Week</button>
+      <button type="button" id="viewList" aria-pressed="false">List</button>
+    </div>
+  </div>
+
+  <div id="weekView">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <button type="button" class="btn" id="prevWeek">‹ Prev</button>
+      <span id="weekLabel" style="font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.06em"></span>
+      <button type="button" class="btn" id="nextWeek">Next ›</button>
+    </div>
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+
+  <ul class="qlist" id="listView" hidden></ul>
+
+  <div class="cal-actions">
+    <button type="button" class="btn btn-dark" id="genSlip">Generate publish slip →</button>
+    <button type="button" class="btn" id="clearDone">Clear past posts</button>
+    <button type="button" class="btn" id="clearAll">Clear all</button>
+  </div>
+
+  <div class="slip-wrap" id="slipWrap" hidden>
+    <div class="slip-head"><h3>Publish slip</h3><button type="button" class="copy-btn" id="copyBtn">Copy slip</button></div>
+    <pre id="slip"></pre>
+    <p class="slip-note">Paste this into <b>Claude</b> (Blotato connected) and say <b>“publish these.”</b> Either of you can do it from the same Claude. Cross-checked against the calendar. Times are WIB.</p>
+  </div>
+</section>
+
+<footer><span>AB STUDIO · PLUIT</span><span>compose · preview · calendar · slip → claude</span></footer>
+
+<script>
+(function(){
+  "use strict";
+  var KEY="ab_scheduler_v1";
+  var FMT_NOTES={
+    post:"Single image, posted to the feed.",
+    reel:"Video reel. Needs an .mp4 URL — a still won’t publish as a reel.",
+    story:"Single image or video. Vanishes in 24h. Add overlay text + link below.",
+    carousel:"Up to 10 images, swipeable. Add each image link."
+  };
+  var DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var state={fmt:"post",alsoStory:false,mode:"once",posts:load()};
+  var weekOffset=0;
+
+  function $(id){return document.getElementById(id);}
+  function pad(n){return('0'+n).slice(-2);}
+  function fmtDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+  function dayAbbr(s){try{return DOW[new Date(s+'T00:00:00').getDay()];}catch(e){return'';}}
+  function load(){try{var r=localStorage.getItem(KEY);return r?JSON.parse(r):[];}catch(e){return[];}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state.posts));}catch(e){}}
+
+  // default dates
+  (function(){
+    var d=new Date();var add=(0-d.getDay()+7)%7||7;d.setDate(d.getDate()+add);
+    $('date').value=fmtDate(d);
+    var t=new Date();t.setDate(t.getDate()+1);$('repStart').value=fmtDate(t);
+  })();
+
+  // ---------- tabs ----------
+  function showTab(which){
+    var c=which==='compose';
+    $('tab-compose').setAttribute('aria-selected',c?'true':'false');
+    $('tab-calendar').setAttribute('aria-selected',c?'false':'true');
+    $('view-compose').hidden=!c;$('view-calendar').hidden=c;
+    if(!c)renderCalendar();
+  }
+  $('tab-compose').addEventListener('click',function(){showTab('compose');});
+  $('tab-calendar').addEventListener('click',function(){showTab('calendar');});
+
+  // ---------- format ----------
+  document.querySelectorAll('.seg button').forEach(function(b){
+    b.addEventListener('click',function(){
+      var f=b.dataset.fmt;
+      if(f==='story'){
+        // story is an independent toggle that can pair with a feed type
+        state.alsoStory=!state.alsoStory;
+        b.setAttribute('aria-pressed',state.alsoStory?'true':'false');
+        // if nothing else selected and story turned off, default back to post
+        if(!state.alsoStory && !state.fmt) state.fmt='post';
+      } else {
+        // post / reel / carousel are mutually exclusive feed types
+        state.fmt=f;
+        document.querySelectorAll('.seg button').forEach(function(x){
+          if(x.dataset.fmt!=='story') x.setAttribute('aria-pressed','false');
+        });
+        b.setAttribute('aria-pressed','true');
+      }
+      updateFmtUI();
+      renderPreview();
+    });
+  });
+  function updateFmtUI(){
+    var parts=[];
+    if(state.fmt) parts.push(FMT_NOTES[state.fmt]);
+    if(state.alsoStory) parts.push(FMT_NOTES.story);
+    $('mediaNote').innerHTML = parts.join('<br>');
+    $('carouselAdd').hidden=(state.fmt!=='carousel');
+    $('storyExtras').hidden=!state.alsoStory;
+    if(state.fmt!=='carousel')trimUrls();
+  }
+
+  // ---------- urls ----------
+  var urlIdx=1;
+  $('addUrl').addEventListener('click',function(){
+    if(document.querySelectorAll('#urlList input').length>=10)return;
+    var row=document.createElement('div');row.className='url-row';
+    var inp=document.createElement('input');inp.type='url';inp.placeholder='https://… image '+(urlIdx+1);inp.id='url'+urlIdx;urlIdx++;
+    inp.addEventListener('input',renderPreview);
+    var x=document.createElement('button');x.type='button';x.className='url-x';x.textContent='×';
+    x.addEventListener('click',function(){row.remove();renderPreview();});
+    row.appendChild(inp);row.appendChild(x);$('urlList').appendChild(row);
+  });
+  function trimUrls(){var rows=document.querySelectorAll('#urlList .url-row');for(var i=1;i<rows.length;i++)rows[i].remove();}
+  function getUrls(){return Array.prototype.map.call(document.querySelectorAll('#urlList input'),function(i){return i.value.trim();}).filter(Boolean);}
+  $('url0').addEventListener('input',renderPreview);
+
+  // ---------- gdrive convert ----------
+  function driveDirect(link){
+    var m=link.match(/\/d\/([A-Za-z0-9_-]+)/)||link.match(/[?&]id=([A-Za-z0-9_-]+)/);
+    if(!m)return null;
+    return 'https://drive.google.com/uc?export=download&id='+m[1];
+  }
+  $('gdriveBtn').addEventListener('click',function(){
+    var raw=$('gdriveIn').value.trim();
+    if(!raw){alert('Paste a Drive link first.');return;}
+    var direct=driveDirect(raw);
+    if(!direct){alert('Could not read a file ID from that link. Make sure it’s a Drive /file/d/… link.');return;}
+    // drop into first empty url field, else url0
+    var inputs=document.querySelectorAll('#urlList input');
+    var target=null;
+    for(var i=0;i<inputs.length;i++){if(!inputs[i].value.trim()){target=inputs[i];break;}}
+    if(!target)target=inputs[0];
+    target.value=direct;
+    $('gdriveIn').value='';
+    renderPreview();
+    var b=$('gdriveBtn'),o=b.textContent;b.textContent='Added ↑';setTimeout(function(){b.textContent=o;},1400);
+  });
+
+  // ---------- caption / tags ----------
+  function normTags(raw){
+    return raw.split(/[\s,]+/).filter(Boolean).map(function(t){return t[0]==='#'?t:'#'+t;}).join(' ');
+  }
+  $('caption').addEventListener('input',function(){
+    var v=$('caption').value,n=v.length;
+    $('capCount').textContent=n+' / 2200';
+    var flags=[];
+    if(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}]/u.test(v))flags.push('emoji?');
+    if(/!/.test(v))flags.push('“!”?');
+    $('capFlags').textContent=flags.length?'check: '+flags.join(' · '):'';
+    renderPreview();
+  });
+  $('tags').addEventListener('input',renderPreview);
+  $('stText').addEventListener('input',renderPreview);
+  $('stLink').addEventListener('input',renderPreview);
+  $('tagProfile').addEventListener('input',renderPreview);
+
+  // ---------- schedule mode ----------
+  $('modeOnce').addEventListener('click',function(){setMode('once');});
+  $('modeRepeat').addEventListener('click',function(){setMode('repeat');});
+  function setMode(m){
+    state.mode=m;
+    $('modeOnce').setAttribute('aria-pressed',m==='once'?'true':'false');
+    $('modeRepeat').setAttribute('aria-pressed',m==='repeat'?'true':'false');
+    $('onceFields').hidden=(m!=='once');$('repeatFields').hidden=(m!=='repeat');
+  }
+  document.querySelectorAll('#repDow button').forEach(function(b){
+    b.addEventListener('click',function(){
+      b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true');
+    });
+  });
+  $('onceFields').addEventListener('click',function(e){
+    var p=e.target.closest('.preset');if(!p)return;
+    var d=new Date(),k=p.dataset.p;
+    if(k==='sun19'){var a=(0-d.getDay()+7)%7||7;d.setDate(d.getDate()+a);$('date').value=fmtDate(d);$('time').value='19:00';}
+    if(k==='tue19'){var a2=(2-d.getDay()+7)%7||7;d.setDate(d.getDate()+a2);$('date').value=fmtDate(d);$('time').value='19:00';}
+    if(k==='tom8'){d.setDate(d.getDate()+1);$('date').value=fmtDate(d);$('time').value='08:00';}
+  });
+
+  // ---------- PREVIEW ----------
+  var previewMode='feed'; // 'feed' | 'story'
+  function renderPreview(){
+    // decide what this preview shows
+    var hasFeed=!!state.fmt, hasStory=state.alsoStory;
+    if(hasStory && !hasFeed) previewMode='story';
+    if(hasFeed && !hasStory) previewMode='feed';
+    // show/hide the toggle
+    var tog=$('pvToggle');
+    if(hasFeed && hasStory){ tog.hidden=false;
+      $('pvFeed').setAttribute('aria-pressed',previewMode==='feed'?'true':'false');
+      $('pvStory').setAttribute('aria-pressed',previewMode==='story'?'true':'false');
+    } else tog.hidden=true;
+
+    var showStory=(previewMode==='story' && hasStory);
+    var urls=getUrls(),screen=$('screen'),empty=$('phEmpty');
+    screen.className='screen'+(!showStory&&(state.fmt==='post'||state.fmt==='carousel')?' feed':'');
+    Array.prototype.slice.call(screen.querySelectorAll('img,.st-grad,.st-top,.st-bar,.st-text,.st-link,.reel-badge,.carousel-dots')).forEach(function(n){n.remove();});
+    var first=urls[0];
+    if(first){
+      empty.hidden=true;
+      var img=document.createElement('img');img.src=first;img.alt='';
+      img.onerror=function(){img.remove();empty.hidden=false;empty.innerHTML='<span>⚠</span>can’t load this URL.<br>use a direct image link';};
+      img.onload=function(){empty.hidden=true;};
+      screen.insertBefore(img,screen.firstChild);
+    } else {empty.hidden=false;empty.innerHTML='<span>▢</span>paste a direct image URL to preview';}
+
+    var capBox=$('fvCap'),collabBox=$('fvCollab');
+    var cap=$('caption').value.trim();
+    var tags=$('tags').value.trim()?normTags($('tags').value.trim()):'';
+    var collab=$('tagProfile').value.trim();
+
+    if(showStory){
+      capBox.hidden=true;collabBox.hidden=true;
+      var grad=document.createElement('div');grad.className='st-grad';screen.appendChild(grad);
+      var bar=document.createElement('div');bar.className='st-bar';screen.appendChild(bar);
+      var top=document.createElement('div');top.className='st-top';
+      var ring=document.createElement('div');ring.className='st-ring';if(first)ring.style.backgroundImage='url('+first+')';
+      var h=document.createElement('div');h.className='st-handle';h.textContent='abstudio_jakarta';
+      top.appendChild(ring);top.appendChild(h);screen.appendChild(top);
+      var stt=$('stText').value.trim();
+      if(stt){var t=document.createElement('div');t.className='st-text';t.textContent=stt;screen.appendChild(t);}
+      var stl=$('stLink').value.trim();
+      if(stl){var l=document.createElement('div');l.className='st-link';
+        var label=stl.replace(/^https?:\/\//,'').replace(/^www\./,'');
+        l.innerHTML='<span class="chev">▲</span><span>'+(label.length>26?label.slice(0,26)+'…':label)+'</span>';
+        screen.appendChild(l);}
+    } else {
+      if(state.fmt==='reel'){var rb=document.createElement('div');rb.className='reel-badge';rb.textContent='▶ REEL';screen.appendChild(rb);}
+      if(state.fmt==='carousel'&&urls.length>1){
+        var dots=document.createElement('div');dots.className='carousel-dots';
+        urls.slice(0,8).forEach(function(_,i){var d=document.createElement('i');if(i===0)d.className='on';dots.appendChild(d);});
+        screen.appendChild(dots);
+      }
+      var html='';
+      if(cap)html+=esc(cap);
+      if(tags)html+=(cap?'\n':'')+'<span class="tags">'+esc(tags)+'</span>';
+      if(html){capBox.innerHTML='<b>abstudio_jakarta</b> '+html;capBox.hidden=false;}else capBox.hidden=true;
+      if(collab){collabBox.textContent='tagged: '+collab.split(',').map(function(s){return '@'+s.trim();}).join(' ');collabBox.hidden=false;}
+      else collabBox.hidden=true;
+    }
+  }
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  // ---------- ADD ----------
+  $('addBtn').addEventListener('click',function(){
+    var urls=getUrls();
+    if(!urls.length){alert('Add a media link.');return;}
+    if(!state.fmt && !state.alsoStory){alert('Pick a post type.');return;}
+    var caption=$('caption').value.trim();
+    var tags=$('tags').value.trim()?normTags($('tags').value.trim()):'';
+    var collab=$('tagProfile').value.trim();
+    var stText=$('stText').value.trim(),stLink=$('stLink').value.trim();
+
+    // build the list of format-variants this entry produces
+    var variants=[];
+    if(state.fmt) variants.push({fmt:state.fmt,caption:caption,tags:tags,collab:collab,urls:urls,stText:'',stLink:''});
+    if(state.alsoStory) variants.push({fmt:'story',caption:'',tags:'',collab:collab,urls:[urls[0]],stText:stText,stLink:stLink});
+
+    // resolve the schedule slots (one-time or recurring)
+    var slots=[];
+    if(state.mode==='once'){
+      if(!$('date').value){alert('Pick a date.');return;}
+      slots.push({date:$('date').value,time:$('time').value||'19:00'});
+    } else {
+      var days=[];document.querySelectorAll('#repDow button').forEach(function(b){if(b.getAttribute('aria-pressed')==='true')days.push(+b.dataset.d);});
+      if(!days.length){alert('Pick at least one weekday.');return;}
+      var weeks=Math.max(1,parseInt($('repWeeks').value,10)||1);
+      if(!$('repStart').value){alert('Set a start date.');return;}
+      var start=new Date($('repStart').value+'T00:00:00'),time=$('repTime').value||'19:00';
+      var dates=[];
+      for(var w=0;w<weeks;w++)days.forEach(function(dw){var d=new Date(start);var a=(dw-d.getDay()+7)%7;d.setDate(d.getDate()+a+w*7);dates.push(fmtDate(d));});
+      dates.sort();dates.forEach(function(d){slots.push({date:d,time:time});});
+    }
+
+    // cross slots × variants
+    var made=[];
+    slots.forEach(function(s){
+      variants.forEach(function(v){
+        made.push(Object.assign({},v,{date:s.date,time:s.time}));
+      });
+    });
+    made.forEach(function(m){m.id=Date.now()+'_'+Math.random().toString(36).slice(2,7);state.posts.push(m);});
+    save();softReset();
+    $('calCount').textContent=state.posts.length;
+    alert(made.length+(made.length===1?' post':' posts')+' added to calendar.');
+  });
+  function softReset(){
+    document.querySelectorAll('#urlList .url-row').forEach(function(r,i){if(i===0)r.querySelector('input').value='';else r.remove();});
+    $('caption').value='';$('tags').value='';$('stText').value='';$('stLink').value='';$('tagProfile').value='';
+    $('capCount').textContent='0 / 2200';$('capFlags').textContent='';
+    renderPreview();
+  }
+
+  // ---------- CALENDAR ----------
+  $('viewWeek').addEventListener('click',function(){toggleCalView('week');});
+  $('viewList').addEventListener('click',function(){toggleCalView('list');});
+  function toggleCalView(v){
+    $('viewWeek').setAttribute('aria-pressed',v==='week'?'true':'false');
+    $('viewList').setAttribute('aria-pressed',v==='list'?'true':'false');
+    $('weekView').hidden=(v!=='week');$('listView').hidden=(v!=='list');
+    renderCalendar();
+  }
+  $('prevWeek').addEventListener('click',function(){weekOffset--;renderCalendar();});
+  $('nextWeek').addEventListener('click',function(){weekOffset++;renderCalendar();});
+
+  function startOfWeek(off){var d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-d.getDay()+off*7);return d;}
+  function renderCalendar(){
+    $('calCount').textContent=state.posts.length;
+    if(!$('listView').hidden){renderList();return;}
+    var grid=$('weekGrid');grid.innerHTML='';
+    var sow=startOfWeek(weekOffset),today=fmtDate(new Date());
+    var label=sow.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' – ';
+    var eow=new Date(sow);eow.setDate(eow.getDate()+6);
+    $('weekLabel').textContent=label+eow.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    DOW.forEach(function(d){var h=document.createElement('div');h.className='wd-head';h.textContent=d;grid.appendChild(h);});
+    for(var i=0;i<7;i++){
+      var day=new Date(sow);day.setDate(day.getDate()+i);var ds=fmtDate(day);
+      var cell=document.createElement('div');cell.className='wd-cell'+(ds===today?' today':'');
+      var num=document.createElement('div');num.className='dnum';num.textContent=day.getDate();cell.appendChild(num);
+      state.posts.filter(function(p){return p.date===ds;}).sort(function(a,b){return a.time<b.time?-1:1;}).forEach(function(p){
+        var ev=document.createElement('div');ev.className='ev '+p.fmt;
+        ev.innerHTML='<span class="et">'+p.time+' · '+p.fmt+'</span>'+esc((p.caption||p.stText||'(no caption)').slice(0,40));
+        ev.title=(p.caption||p.stText||'');
+        ev.addEventListener('click',function(){if(confirm('Remove this post?\n\n'+p.time+' '+p.fmt+'\n'+(p.caption||p.stText||'').slice(0,80))){removePost(p.id);}});
+        cell.appendChild(ev);
+      });
+      grid.appendChild(cell);
+    }
+  }
+  function renderList(){
+    var ul=$('listView');ul.innerHTML='';
+    var sorted=state.posts.slice().sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?-1:1;});
+    if(!sorted.length){ul.innerHTML='<li class="empty">No posts on the calendar yet.</li>';return;}
+    sorted.forEach(function(p){
+      var li=document.createElement('li');li.className='qi';
+      var f=document.createElement('span');f.className='fmt';f.textContent=p.fmt;
+      var body=document.createElement('div');body.className='qi-body';
+      var c=document.createElement('div');c.className='qi-cap';c.textContent=p.caption||p.stText||'(no caption)';
+      var m=document.createElement('div');m.className='qi-meta';
+      m.textContent=dayAbbr(p.date)+' '+p.date+' · '+p.time+' WIB'+(p.urls.length>1?' · '+p.urls.length+' imgs':'')+(p.collab?' · @'+p.collab.split(',')[0].trim():'');
+      body.appendChild(c);body.appendChild(m);
+      var x=document.createElement('button');x.className='qi-x';x.textContent='remove';
+      x.addEventListener('click',function(){removePost(p.id);});
+      li.appendChild(f);li.appendChild(body);li.appendChild(x);ul.appendChild(li);
+    });
+  }
+  function removePost(id){state.posts=state.posts.filter(function(p){return p.id!==id;});save();renderCalendar();$('calCount').textContent=state.posts.length;}
+
+  $('clearDone').addEventListener('click',function(){
+    var today=fmtDate(new Date());
+    var before=state.posts.length;
+    state.posts=state.posts.filter(function(p){return p.date>=today;});
+    save();renderCalendar();$('calCount').textContent=state.posts.length;
+    alert((before-state.posts.length)+' past post(s) cleared.');
+  });
+  $('clearAll').addEventListener('click',function(){
+    if(state.posts.length&&confirm('Clear the entire calendar?')){state.posts=[];save();renderCalendar();$('calCount').textContent=0;}
+  });
+
+  // ---------- SLIP ----------
+  $('genSlip').addEventListener('click',function(){
+    if(!state.posts.length){alert('Calendar is empty.');return;}
+    var sorted=state.posts.slice().sort(function(a,b){return (a.date+a.time)<(b.date+b.time)?-1:1;});
+    var lines=['PUBLISH → @abstudio_jakarta','( all times WIB / Asia-Jakarta · '+sorted.length+' posts )',''];
+    sorted.forEach(function(p,i){
+      lines.push('── POST '+(i+1)+' ─────────────');
+      lines.push('Type:    '+p.fmt.toUpperCase());
+      if(p.urls.length>1){lines.push('Media:   carousel ('+p.urls.length+')');p.urls.forEach(function(u,k){lines.push('   ['+(k+1)+'] '+u);});}
+      else lines.push('Media:   '+p.urls[0]);
+      lines.push('When:    '+dayAbbr(p.date)+' '+p.date+'  '+p.time);
+      if(p.collab)lines.push('Tag:     '+p.collab);
+      if(p.fmt==='story'){
+        if(p.stText)lines.push('Overlay: '+p.stText);
+        if(p.stLink)lines.push('Link:    '+p.stLink);
+      } else {
+        lines.push('Caption:');
+        var full=(p.caption||'')+(p.tags?'\n\n'+p.tags:'');
+        (full||'(none)').split('\n').forEach(function(l){lines.push('  '+l);});
+      }
+      lines.push('');
+    });
+    $('slip').textContent=lines.join('\n');
+    $('slipWrap').hidden=false;
+    $('slipWrap').scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  function copyText(txt,btn){
+    function ok(){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o;},1300);}
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,fb);else fb();
+    function fb(){var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok();}catch(e){alert('Copy manually.');}document.body.removeChild(ta);}
+  }
+  $('copyBtn').addEventListener('click',function(){copyText($('slip').textContent,this);});
+
+  // ---------- preview toggle ----------
+  $('pvFeed').addEventListener('click',function(){previewMode='feed';renderPreview();});
+  $('pvStory').addEventListener('click',function(){previewMode='story';renderPreview();});
+
+  // ---------- hashtag presets ----------
+  var TAGSETS={
+    group:'#ABStudio #GroupClassJakarta #PluitGym #WorkoutJakarta #GymIndonesia',
+    private:'#ABStudio #PersonalTrainerJakarta #PrivateTrainingJakarta #PluitGym #GymJakarta',
+    base:'#ABStudio'
+  };
+  document.querySelectorAll('.tagset').forEach(function(b){
+    b.addEventListener('click',function(){$('tags').value=TAGSETS[b.dataset.set];renderPreview();});
+  });
+
+  // ---------- caption generator ----------
+  var cgLangSel='en';
+  var CAPGEN={
+    en:{
+    method:[
+      "the part most people skip is the part that holds everything together. {f}\n\nwe don't rush it. we build it.",
+      "{f} isn't the warmup to the real work. it is the work.\n\nslow, deliberate, repeatable. that's the method.",
+      "no shortcuts here. {f} gets the same attention as everything else.\n\nthat's why it holds."
+    ],
+    transformation:[
+      "progress doesn't announce itself. it shows up quietly — {f} that used to feel impossible, now routine.\n\nkeep showing up.",
+      "you won't notice the day it changed. you'll notice the week you stopped negotiating with yourself.\n\n{f}, week after week.",
+      "the before and after isn't the photo. it's {f} you can do now without thinking about it."
+    ],
+    mindset:[
+      "it stopped being something to get through.\n\n{f}, the studio, the work — it's mine now. that's the shift.",
+      "discipline isn't loud. it's just showing up for {f} when no one's watching.\n\nthat's the whole thing.",
+      "you don't find the time. you decide {f} matters, and the time appears."
+    ],
+    invite:[
+      "{f} — built around you, not a crowd.\n\nwhen you're ready, the door's open.",
+      "no guesswork, no plan you'll abandon. just {f}, structured for where you actually are.\n\ndm to start.",
+      "we kept it small on purpose. {f}, real attention, room to do it right.\n\ncome see."
+    ],
+    member:[
+      "\"i didn't think {f} was for me. turns out it just needed to be taught right.\"\n\n— from one of ours.",
+      "the quiet wins are the ones that stick. {f}, one session at a time.\n\nthat's how it's done here.",
+      "she came for {f}. she stayed for what it did to the rest of her week."
+    ],
+    class:[
+      "this week: {f}.\n\nstructured, paced, and built to leave you steadier than you came in.",
+      "{f} — eight people, full attention, no autopilot.\n\nbook your spot.",
+      "what we're working on: {f}.\n\ncome move with intention."
+    ]
+    },
+    id:{
+    method:[
+      "bagian yang sering dilewati justru bagian yang bikin semuanya nyatu. {f}\n\nkami nggak buru-buru. kami bangun pelan-pelan.",
+      "{f} bukan pemanasan sebelum latihan. ini latihannya.\n\npelan, sadar, konsisten. itu metodenya.",
+      "nggak ada jalan pintas di sini. {f} dapat perhatian yang sama.\n\nitu sebabnya hasilnya bertahan."
+    ],
+    transformation:[
+      "progres nggak datang dengan ribut. dia muncul pelan — {f} yang dulu terasa mustahil, sekarang biasa.\n\nterus datang.",
+      "kamu nggak akan sadar hari saat semuanya berubah. kamu akan sadar minggu saat kamu berhenti menawar sama diri sendiri.\n\n{f}, minggu demi minggu.",
+      "before-after-nya bukan foto. tapi {f} yang sekarang bisa kamu lakukan tanpa mikir."
+    ],
+    mindset:[
+      "ini berhenti jadi sesuatu yang harus dilewati.\n\n{f}, studionya, latihannya — sekarang ini milikku. itu pergeserannya.",
+      "disiplin itu nggak berisik. cuma soal datang buat {f} waktu nggak ada yang lihat.\n\nitu intinya.",
+      "kamu nggak nyari waktu. kamu putusin {f} itu penting, dan waktunya muncul sendiri."
+    ],
+    invite:[
+      "{f} — dirancang buat kamu, bukan buat keramaian.\n\npas kamu siap, pintunya terbuka.",
+      "nggak nebak-nebak, nggak ada program yang bakal kamu tinggalin. cuma {f}, disusun sesuai kondisimu sekarang.\n\ndm buat mulai.",
+      "kami sengaja bikin kecil. {f}, perhatian penuh, ruang buat ngelakuin dengan benar.\n\nmampir ya."
+    ],
+    member:[
+      "\"aku kira {f} bukan buat aku. ternyata cuma perlu diajarin dengan benar.\"\n\n— dari salah satu member kami.",
+      "kemenangan kecil yang justru nempel. {f}, satu sesi demi satu sesi.\n\nbegitu caranya di sini.",
+      "dia datang buat {f}. dia bertahan karena efeknya ke sisa minggunya."
+    ],
+    class:[
+      "minggu ini: {f}.\n\ntersusun, terukur, dibikin biar kamu pulang lebih stabil dari pas datang.",
+      "{f} — delapan orang, perhatian penuh, nggak ada autopilot.\n\nbooking tempatmu.",
+      "yang lagi kami kerjain: {f}.\n\nyuk gerak dengan niat."
+    ]
+    }
+  };
+  document.querySelectorAll('#cgLang button').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('#cgLang button').forEach(function(x){x.setAttribute('aria-pressed','false');});
+      b.setAttribute('aria-pressed','true');cgLangSel=b.dataset.lang;
+    });
+  });
+  $('cgGen').addEventListener('click',function(){
+    var angle=$('cgAngle').value;
+    var cls=$('cgClass').value;
+    var manualFocus=$('cgFocus').value.trim();
+    var out=$('cgOut');out.innerHTML='';out.hidden=false;
+    var texts=[];
+
+    // class spotlight uses real schedule
+    if(angle==='class' && cls){
+      if(cls==='private'){
+        texts=CLASS_TPL.private[cgLangSel].slice();
+      } else {
+        var c=CLASSES[cls];
+        texts=CLASS_TPL[cgLangSel].map(function(tpl){
+          return tpl.replace(/\{n\}/g,c.name).replace(/\{d\}/g,c.day).replace(/\{hd\}/g,c.hari).replace(/\{t\}/g,c.times);
+        });
+      }
+    } else {
+      // other angles: focus = manual override, else class focus, else angle default
+      var focus=manualFocus;
+      if(!focus && cls){ focus = (cgLangSel==='id'?CLASSES[cls].focusId:CLASSES[cls].focus); }
+      if(!focus){ focus=defaultFocus(angle,cgLangSel); }
+      var pool=(CAPGEN[cgLangSel]||CAPGEN.en)[angle]||CAPGEN[cgLangSel].method;
+      texts=pool.map(function(tpl){ return tpl.replace(/\{f\}/g, focus); });
+    }
+
+    texts.forEach(function(text,i){
+      var div=document.createElement('div');div.className='cg-opt';
+      div.innerHTML='<span class="pick">option '+(i+1)+' · tap to use</span>'+esc(text);
+      div.addEventListener('click',function(){
+        $('caption').value=text;
+        $('caption').dispatchEvent(new Event('input'));
+        out.querySelectorAll('.cg-opt').forEach(function(o){o.style.opacity='.45';});
+        div.style.opacity='1';
+      });
+      out.appendChild(div);
+    });
+  });
+  function defaultFocus(angle,lang){
+    var en={method:'the reset',transformation:'the rep',mindset:'the work',invite:'private training',member:'this',class:'this week\'s focus'};
+    var id={method:'reset-nya',transformation:'repnya',mindset:'latihannya',invite:'private training',member:'ini',class:'fokus minggu ini'};
+    return ((lang==='id'?id:en)[angle])||(lang==='id'?'latihannya':'the work');
+  }
+
+  // ---- AB class knowledge (from brand) ----
+  var CLASSES={
+    matsculpt:{name:'Mat Sculpt',day:'Monday',hari:'Senin',times:'08:00 · 09:00 · 18:30',energy:'soft',focus:'the slow, controlled work',focusId:'kerja pelan dan terkontrol'},
+    strength:{name:'Strength',day:'Tuesday',hari:'Selasa',times:'08:00 · 09:00 · 18:30',energy:'strong',focus:'the lift',focusId:'angkatannya'},
+    hybrid:{name:'Hybrid Functional',day:'Wednesday & Friday',hari:'Rabu & Jumat',times:'08:00 · 09:00 · 18:30',energy:'strong',focus:'moving well under load',focusId:'gerak yang benar di bawah beban'},
+    powerstretch:{name:'Power Stretch',day:'Thursday',hari:'Kamis',times:'08:00 · 09:00 · 18:30',energy:'soft',focus:'the reset your week needs',focusId:'reset yang mingguanmu butuhkan'},
+    abway:{name:'The AB Way',day:'Saturday',hari:'Sabtu',times:'07:00 · 08:00 · 09:00',energy:'signature',focus:'the full method, start to finish',focusId:'metode lengkap, dari awal sampai akhir'},
+    private:{name:'Private Training',day:'',hari:'',times:'',energy:'private',focus:'one-on-one, built around your goal',focusId:'satu lawan satu, dirancang sesuai goal-mu'}
+  };
+  // class-spotlight templates use real schedule details. {n}=name {d}=day {t}=times
+  var CLASS_TPL={
+    en:[
+      "{d}. {n}. {t}.\n\n8 spots. that's the whole list.",
+      "{n} this week — {d}, {t}.\n\neight people, full attention, no autopilot.",
+      "{n}. {d} mornings and evening. {t}.\n\ncome move with intention."
+    ],
+    id:[
+      "{hd}. {n}. {t}.\n\n8 tempat. cuma itu daftarnya.",
+      "{n} minggu ini — {hd}, {t}.\n\ndelapan orang, perhatian penuh, nggak ada autopilot.",
+      "{n}. {hd} pagi dan sore. {t}.\n\nyuk gerak dengan niat."
+    ],
+    private:{
+      en:[
+        "private training — one-on-one, built around your goal.\n\nwhen you're ready, the door's open.",
+        "no crowd. just you, a coach, and a plan that fits where you actually are.\n\ndm to start.",
+        "the most personal way to train here. private sessions, real attention.\n\ncome see."
+      ],
+      id:[
+        "private training — satu lawan satu, dirancang sesuai goal-mu.\n\npas kamu siap, pintunya terbuka.",
+        "nggak ada keramaian. cuma kamu, satu coach, dan program yang pas sama kondisimu sekarang.\n\ndm buat mulai.",
+        "cara paling personal buat latihan di sini. sesi private, perhatian penuh.\n\nmampir ya."
+      ]
+    }
+  };
+
+  // init
+  renderPreview();
+  $('calCount').textContent=state.posts.length;
+})();
+</script>
+</body>
+</html>
